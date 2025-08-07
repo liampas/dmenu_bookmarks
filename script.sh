@@ -1,20 +1,32 @@
 #!/bin/bash
 
 DB="/home/liam/.mozilla/firefox/kax45a4s.default-release/places.sqlite"
-OUTDIR="bookmarks_files"
 
-mkdir -p "$OUTDIR"
+# Ensure file exists
+[[ ! -f "$DB" ]] && { echo "DB not found: $DB"; exit 1; }
 
-sqlite3 -readonly -separator $'\t' "$DB" "
-SELECT b.title, COALESCE(a.content, '')
-FROM moz_bookmarks b
-LEFT JOIN moz_items_annos a ON a.item_id = b.id
-LEFT JOIN moz_anno_attributes aa ON aa.id = a.anno_attribute_id
-WHERE b.title IS NOT NULL AND (aa.name = 'bookmarkProperties/description' OR aa.name IS NULL);
-" | while IFS=$'\t' read -r title desc; do
-    [[ -z "$title" ]] && continue
-    safe_name=$(echo "$title" | tr -cd '[:alnum:]._-')
-    # Avoid empty or duplicate filenames
-    [[ -z "$safe_name" ]] && safe_name="bookmark_$RANDOM"
-    echo "$desc" > "$OUTDIR/$safe_name"
+# Extract title and type in parallel
+mapfile -t titles < <(sqlite3 "$DB" "SELECT title FROM moz_bookmarks WHERE title IS NOT NULL;")
+#mapfile -t types < <(sqlite3 "$DB" "SELECT moz_bookmarks.type FROM moz_bookmarks JOIN moz_places ON moz_bookmarks.fk = moz_places.id WHERE moz_places.title IS NOT NULL;")
+mapfile -t type < <(sqlite3 "$DB" "SELECT type FROM moz_bookmarks WHERE title IS NOT NULL;")
+
+
+rm *.desktop
+
+
+# Output for verification
+for i in "${!titles[@]}"; do
+
+    if [ "${type[$i]}" = 2 ]; then
+        touch "amogus"
+    else
+        touch "${titles[$i]}.desktop"
+        echo "${type[$i]}" > "${titles[$i]}.desktop"
+    fi
 done
+
+
+
+#   touch "Type: ${types[$i]}"
+ #       echo "${types[$i]}" > "Title: ${titles[$i]}.txt"
+
