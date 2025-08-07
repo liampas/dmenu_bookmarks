@@ -42,7 +42,13 @@ get_path() {
     while true; do
         local t=${TYPE_MAP[$id]}
         local title=${TITLE_MAP[$id]}
-        local parent=${PARENT_MAP[$id]}
+        local parent=${PARENT_MAP[$id]}# Step 4: Iterate and create folders/files
+for id in "${ids[@]}"; do
+    type=${TYPE_MAP[$id]}
+    title=${TITLE_MAP[$id]}
+
+    # sanitize file/folder name
+    safe_title=$(echo "$title" | tr -cd '[:alnum:]._ -')
 
         # If folder and title exists, prepend folder name
         if [[ "$t" == "2" && -n "$title" ]]; then
