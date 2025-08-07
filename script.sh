@@ -14,7 +14,7 @@ mapfile -t ids < <(sqlite3 "$DB" "SELECT id FROM moz_bookmarks WHERE title IS NO
 mapfile -t titles < <(sqlite3 "$DB" "SELECT title FROM moz_bookmarks WHERE title IS NOT NULL;")
 mapfile -t types < <(sqlite3 "$DB" "SELECT type FROM moz_bookmarks WHERE title IS NOT NULL;")
 mapfile -t parents < <(sqlite3 "$DB" "SELECT parent FROM moz_bookmarks WHERE title IS NOT NULL;")
-
+mapfile -t fks < <(sqlite3 "$DB" "SELECT fk FROM moz_bookmarks WHERE title IS NOT NULL;")
 
 # Step 2: Build a map of id->parent and id->title and id->type (associative arrays)
 declare -A PARENT_MAP
@@ -26,6 +26,13 @@ for i in "${!ids[@]}"; do
     TITLE_MAP[${ids[$i]}]="${titles[$i]}"
     TYPE_MAP[${ids[$i]}]=${types[$i]}
 done
+
+# Build a map of place_id -> URL
+declare -A URL_MAP
+while IFS='|' read -r id url; do
+    URL_MAP[$id]="$url"
+done < <(sqlite3 "$DB" "SELECT id, url FROM moz_places;")
+
 
 # Step 3: Function to get full folder path by recursively walking parents
 get_path() {
@@ -56,7 +63,8 @@ get_path() {
 }
 
 # Step 4: Iterate and create folders/files
-for id in "${ids[@]}"; do
+for i in "${!ids[@]}"; do
+    id=${ids[$i]}
     type=${TYPE_MAP[$id]}
     title=${TITLE_MAP[$id]}
 
@@ -72,19 +80,18 @@ for id in "${ids[@]}"; do
     if [[ "$type" == "2" ]]; then
         # folder
         mkdir -p "$full_path"
-    elif [[ "$type" == "1" ]]; then
-        # bookmark file in parent folder
-        mkdir -p "$full_path"
-        touch "$full_path/$safe_title.desktop"
-        {
-
+elif [[ "$type" == "1" ]]; then
+    mkdir -p "$full_path"
+    fk=${fks[$i]}
+    url="${URL_MAP[$fk]}"
+    {
         echo "[Desktop Entry]"
         echo "Version=1.0"
         echo "Type=Application"
         echo "Name=$safe_title"
-        echo "Exec=firefox"
-        echo "Categories=$safe_title"
-        echo "Comment=$safe_title"
-        } > "$full_path/$safe_title.desktop"
+        echo "Exec=firefox \"$url\""
+        echo "Categories=Bookmarks"
+        echo "Comment=$url"
+    } > "$full_path/$safe_title.desktop"
     fi
 done
