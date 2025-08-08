@@ -42,22 +42,13 @@ get_path() {
     while true; do
         local t=${TYPE_MAP[$id]}
         local title=${TITLE_MAP[$id]}
-        local parent=${PARENT_MAP[$id]}# Step 4: Iterate and create folders/files
-for id in "${ids[@]}"; do
-    type=${TYPE_MAP[$id]}
-    title=${TITLE_MAP[$id]}
+        local parent=${PARENT_MAP[$id]}
 
-    # sanitize file/folder name
-    safe_title=$(echo "$title" | tr -cd '[:alnum:]._ -')
-
-        # If folder and title exists, prepend folder name
         if [[ "$t" == "2" && -n "$title" ]]; then
-            # sanitize folder name
             local safe_title=$(echo "$title" | tr -cd '[:alnum:]._ -')
             path="$safe_title/$path"
         fi
 
-        # Stop at root bookmarks (usually parent 0 or no parent)
         if [[ "$parent" == "0" || -z "$parent" || "$id" == "$parent" ]]; then
             break
         fi
@@ -74,30 +65,25 @@ for i in "${!ids[@]}"; do
     type=${TYPE_MAP[$id]}
     title=${TITLE_MAP[$id]}
 
-    # sanitize file/folder name
     safe_title=$(echo "$title" | tr -cd '[:alnum:]._ -')
-
-    # get parent folder path relative to root
     folder_path=$(get_path "$id")
-
-    # full path to create
     full_path="$ROOT_DIR/$folder_path"
 
     if [[ "$type" == "2" ]]; then
-        # folder
         mkdir -p "$full_path"
-elif [[ "$type" == "1" ]]; then
-    mkdir -p "$full_path"
-    fk=${fks[$i]}
-    url="${URL_MAP[$fk]}"
-    {
-        echo "[Desktop Entry]"
-        echo "Version=1.0"
-        echo "Type=Application"
-        echo "Name=$safe_title"
-        echo "Exec=firefox \"$url\""
-        echo "Categories=Bookmarks"
-        echo "Comment=$url"
-    } > "$full_path/$safe_title.desktop"
+    elif [[ "$type" == "1" ]]; then
+        mkdir -p "$full_path"
+        fk=${fks[$i]}
+        url="${URL_MAP[$fk]}"
+        {
+            echo "[Desktop Entry]"
+            echo "Version=1.0"
+            echo "Type=Application"
+            echo "Name=$safe_title"
+            echo "Exec=firefox \"$url\""
+            echo "Categories=Bookmarks"
+            echo "Comment=$url"
+        } > "$full_path/$safe_title.desktop"
     fi
 done
+
