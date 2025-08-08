@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DB="/home/liam/.mozilla/firefox/kax45a4s.default-release/places.sqlite"
-ROOT_DIR="firefox_bookmarks"
+ROOT_DIR="bookmarks"
 
 # Clean previous output
 rm -rf "$ROOT_DIR"
